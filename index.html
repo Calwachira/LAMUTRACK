@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LamuTrack – Port to destination cargo tracking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F3F6F7;--surf:#fff;--ink:#10252C;--mute:#5B6F76;--line:#E0E7E9;--acc:#0E8A8A;--acc-s:#DAF0EF;--warn:#B56F08;--warn-s:#FBEFD9;--bad:#C23B4E;--bad-s:#FBE4E7;--ok:#2E8B57;--ok-s:#E0F3E8;--info:#2F66A8;--info-s:#E2ECF8;--land:#EAF0EE;--sea:#DCEBF1;--side:#0E2A33;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B1A1F;--surf:#12262D;--ink:#E7F0F2;--mute:#93A9B0;--line:#213A43;--acc:#3CC4BF;--acc-s:#143A3C;--warn:#E8A33D;--warn-s:#3A2D12;--bad:#F0707F;--bad-s:#3E1B22;--ok:#54C58A;--ok-s:#153525;--info:#6FA3E0;--info-s:#172E4B;--land:#17323A;--sea:#0F2229;--side:#08141A;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1A1F;--surf:#12262D;--ink:#E7F0F2;--mute:#93A9B0;--line:#213A43;--acc:#3CC4BF;--acc-s:#143A3C;--warn:#E8A33D;--warn-s:#3A2D12;--bad:#F0707F;--bad-s:#3E1B22;--ok:#54C58A;--ok-s:#153525;--info:#6FA3E0;--info-s:#172E4B;--land:#17323A;--sea:#0F2229;--side:#08141A;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif}
+h1,h2,h3,.brand b{font-family:'Bricolage Grotesque','Instrument Sans',system-ui,sans-serif;margin:0;letter-spacing:-.01em}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.app{display:grid;grid-template-columns:224px minmax(0,1fr);min-height:100vh}
+.side{background:var(--side);color:#BFD6DA;padding:20px 14px;position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;gap:6px}
+.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 18px;color:#fff}
+.brand b{font-size:19px}.brand svg{flex:none}
+.nav{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;border-radius:8px;padding:9px 10px;text-align:left;color:inherit}
+.nav:hover{background:rgba(255,255,255,.06)}.nav.on{background:rgba(255,255,255,.12);color:#fff}
+.nav svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.badge{margin-left:auto;background:var(--bad);color:#fff;border-radius:99px;font-size:11px;padding:0 7px;font-weight:600}
+.side small{margin-top:auto;padding:8px;opacity:.7;line-height:1.4}
+main{padding:22px 28px 40px;min-width:0}
+.head{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.head h1{font-size:26px;margin-right:auto}
+.search{border:1px solid var(--line);background:var(--surf);color:var(--ink);border-radius:10px;padding:9px 12px;width:260px;max-width:100%;font:inherit}
+.live{display:flex;align-items:center;gap:7px;color:var(--mute);font-size:13px}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--ok);animation:p 1.8s infinite}
+@keyframes p{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.live i{animation:none}.drawer{transition:none!important}}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi span{color:var(--mute);font-size:13px}.kpi b{display:block;font:700 28px/1.15 'Bricolage Grotesque',sans-serif;margin-top:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr);gap:16px;align-items:start}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.card>h2{font-size:16px;padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card>h2 span{font:500 12px 'Instrument Sans',sans-serif;color:var(--mute)}
+.map{background:var(--sea);display:block;width:100%;height:auto;max-height:640px}
+.list{max-height:640px;overflow:auto}
+.row{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;align-items:center}
+.row:hover,.row.sel{background:var(--bg)}
+.row .m{min-width:0;flex:1}.row b{display:block}.row small{color:var(--mute);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:5px;background:var(--line);border-radius:9px;overflow:hidden;margin-top:7px}.bar i{display:block;height:100%;background:var(--acc)}
+.chip{display:inline-block;border-radius:99px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-info{background:var(--info-s);color:var(--info)}.c-acc{background:var(--acc-s);color:var(--acc)}.c-warn{background:var(--warn-s);color:var(--warn)}.c-bad{background:var(--bad-s);color:var(--bad)}.c-ok{background:var(--ok-s);color:var(--ok)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.f{border:1px solid var(--line);background:var(--surf);border-radius:99px;padding:6px 13px}.f.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn{border:0;background:var(--acc);color:#fff;border-radius:10px;padding:9px 14px;font-weight:600}
+.btn.ghost{background:var(--surf);color:var(--ink);border:1px solid var(--line)}
+.wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:720px}
+th{text-align:left;font-weight:500;color:var(--mute);font-size:13px;padding:10px 16px;border-bottom:1px solid var(--line)}
+td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--bg)}
+.alert{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);align-items:flex-start}
+.alert p{margin:0;color:var(--mute)}
+.scrim{position:fixed;inset:0;background:rgba(5,15,20,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:30}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--surf);z-index:31;transform:translateX(102%);transition:transform .25s;overflow:auto;padding:calc(20px + env(safe-area-inset-top,0px)) 22px calc(24px + env(safe-area-inset-bottom,0px));border-left:1px solid var(--line)}
+.drawer.open{transform:none}
+.dh{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.dh h2{font-size:22px}
+.x{border:1px solid var(--line);background:none;border-radius:8px;width:34px;height:34px}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
+.facts div{background:var(--bg);border-radius:10px;padding:10px 12px}.facts span{display:block;color:var(--mute);font-size:12px}.facts b{font-weight:600}
+.tl{list-style:none;margin:14px 0 0;padding:0}
+.tl li{position:relative;padding:0 0 18px 28px}
+.tl li:before{content:"";position:absolute;left:5px;top:16px;bottom:-2px;width:2px;background:var(--line)}.tl li:last-child:before{display:none}
+.tl li i{position:absolute;left:0;top:3px;width:12px;height:12px;border-radius:50%;border:2px solid var(--line);background:var(--surf)}
+.tl .done i{background:var(--acc);border-color:var(--acc)}.tl .done:before{background:var(--acc)}
+.tl .now i{border-color:var(--acc);box-shadow:0 0 0 4px var(--acc-s)}
+.tl .todo{color:var(--mute)}.tl small{display:block;color:var(--mute)}
+.docs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 18px}.docs span{border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:13px}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surf);color:var(--ink);padding:22px;width:min(420px,92vw)}
+dialog::backdrop{background:rgba(5,15,20,.5)}
+label{display:block;margin:12px 0 4px;color:var(--mute);font-size:13px}
+input,select{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:9px;padding:9px 10px;font:inherit}
+.note{color:var(--mute);font-size:12px;padding:10px 16px}
+@media (max-width:900px){
+.app{grid-template-columns:1fr}
+.side{position:fixed;top:auto;left:0;right:0;bottom:0;height:auto;flex-direction:row;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));z-index:20;justify-content:space-around;gap:2px}
+.brand,.side small{display:none}.nav{flex-direction:column;gap:2px;font-size:11px;justify-content:center;padding:6px 2px;text-align:center}.badge{position:absolute;margin:0;transform:translate(14px,-10px)}.nav{position:relative}
+main{padding:16px 14px 96px}.grid{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}.search{width:100%}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav class="side" aria-label="Main">
+  <div class="brand"><svg width="30" height="30" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#0E8A8A"/><path d="M7 20h18l-3 5H10zM16 7v9M11 12l5-5 5 5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><b>LamuTrack</b></div>
+  <button class="nav on" data-v="tower"><svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="3"/><path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/></svg>Control tower</button>
+  <button class="nav" data-v="ship"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10"/></svg>Shipments</button>
+  <button class="nav" data-v="vessels"><svg viewBox="0 0 24 24"><path d="M3 17l2 3h14l2-3zM6 17V9h12v8M12 9V4"/></svg>Vessels</button>
+  <button class="nav" data-v="alerts"><svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 1112 0v6l2 2H4zM10 21h4"/></svg>Alerts<span class="badge" id="ab">0</span></button>
+  <small>Sample data. Positions are simulated to show how live tracking behaves.</small>
+</nav>
+<main>
+  <div class="head"><h1 id="title">Control tower</h1><input class="search" id="q" type="search" placeholder="Search ID, container, consignee" aria-label="Search shipments"><span class="live"><i></i>Live</span></div>
+  <div id="view"></div>
+</main>
+</div>
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="dr" aria-label="Shipment details"></aside>
+<dialog id="dlg"><h2>New shipment</h2>
+<label for="nc">Container number</label><input id="nc" placeholder="MSKU 123456 7">
+<label for="ng">Cargo</label><input id="ng" placeholder="e.g. Rice, 25 kg bags">
+<label for="nn">Consignee</label><input id="nn" placeholder="Company name">
+<label for="nd">Destination</label><select id="nd"></select>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button class="btn ghost" id="dc">Cancel</button><button class="btn" id="ds">Add shipment</button></div></dialog>
+<script>
+const $=s=>document.querySelector(s);
+const L=['Lamu',40.9,-2.27],GS=['Garsen',40.12,-2.27],GA=['Garissa',39.65,-0.45],TH=['Thika',37.07,-1.03],NB=['Nairobi',36.82,-1.29],NK=['Nakuru',36.07,-0.3],IS=['Isiolo',37.58,0.35],MY=['Moyale',39.05,3.52],LO=['Lodwar',35.6,3.12],ND=['Nadapal (S. Sudan)',34.35,4.25];
+const base=[L,GS,GA];
+const R={nairobi:{n:'Nairobi',pts:[...base,TH,NB]},nakuru:{n:'Nakuru',pts:[...base,TH,NB,NK]},moyale:{n:'Moyale (Ethiopia)',pts:[...base,IS,MY]},nadapal:{n:'Nadapal (South Sudan)',pts:[...base,IS,LO,ND]}};
+const km=(a,b)=>1.25*111*Math.hypot(a[1]-b[1],a[2]-b[2]);
+for(const r of Object.values(R)){r.cum=[0];for(let i=1;i<r.pts.length;i++)r.cum.push(r.cum[i-1]+km(r.pts[i-1],r.pts[i]));r.km=r.cum.at(-1)}
+const at=(r,p)=>{const d=p*r.km;let i=1;while(i<r.cum.length-1&&r.cum[i]<d)i++;const t=(d-r.cum[i-1])/(r.cum[i]-r.cum[i-1]||1),a=r.pts[i-1],b=r.pts[i];return[a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]};
+const px=(lo,la)=>[(lo-33.5)*69,(5-la)*69];
+const ST=['Vessel arrived','Discharged at Lamu Port','Customs cleared','Gate-out, e-seal fitted','In transit','Delivered'];
+const OFF=[0,5,18,26,28,60];
+const S=[
+['LT-24071','MSKU 482916 3','Industrial machinery','MSC','Kijani Industries Ltd','nairobi',4,.46,38,'KDG 214T','P. Mwangi'],
+['LT-24072','CMAU 771204 8','Vehicles (RoRo)','CMA CGM','Savannah Motors','nairobi',4,.18,30,'KDA 905C','J. Otieno'],
+['LT-24073','MSKU 330518 2','Rice, 25 kg bags','IRISL','Rift Agro Supplies','nakuru',3,.01,20,'KCZ 118M','A. Kiprop'],
+['LT-24074','IRSU 604421 0','Pharmaceutical supplies (reefer)','IRISL','Horn Health Logistics','moyale',4,.33,52,'KDF 640Q','H. Abdi'],
+['LT-24075','CMAU 559873 6','Construction steel','MSC','Turkana Build Co.','nadapal',4,.58,70,'KDB 377L','S. Lokiru'],
+['LT-24076','GRIU 210934 5','Vehicles (RoRo)','Grimaldi','Coastline Auto Ltd','nairobi',2,0,14],
+['LT-24077','CMAU 884102 9','Fertiliser','CMA CGM','Rift Agro Supplies','nakuru',1,0,66],
+['LT-24078','IRSU 118256 4','Consumer electronics','IRISL','Metro Retail Group','nairobi',0,0,2],
+['LT-24079','MSKU 902115 7','Cooking oil','MSC','Baraka Foods','moyale',5,1,130,'KCY 452P','D. Wanjala'],
+['LT-24080','CMAU 330871 1','Medical equipment','CMA CGM','Aga Care Hospital','nairobi',5,1,96,'KDE 228R','M. Njoroge']
+].map(a=>({id:a[0],cont:a[1],cargo:a[2],line:a[3],cons:a[4],dest:a[5],stage:a[6],p:a[7],ago:a[8],truck:a[9],drv:a[10],seal:'ok',spd:0}));
+S[3].halt=47;S[3].temp=5.1;S[4].seal='tamper';
+const V=[['MV Hamouna','IRISL',5200,'Berth 2','Discharging',0,.64],['MV Grande Florida Palermo','Grimaldi',3800,'Berth 3','Berthed',0,1],['MSC Feeder 01','MSC',1800,'Anchorage',  'Arriving',6,0],['CMA CGM Feeder 02','CMA CGM',1400,'Berth 1','Delayed',14,0],['MV Amu 1','Lamu Shipping',620,'Berth 1','Departed',0,1]];
+let view='tower',sel=null,flt='All',tk=0;
+const stat=s=>s.stage==5?['Delivered','ok']:s.seal=='tamper'?['Seal alert','bad']:s.halt?['Stopped','warn']:s.stage<2?['At port','info']:s.stage==2?['Customs cleared','acc']:['In transit','acc'];
+const chip=(t,c)=>`<span class="chip c-${c}">${t}</span>`;
+const route=s=>R[s.dest];
+const prog=s=>s.stage==5?1:s.stage>=3?s.p:0;
+const rem=s=>route(s).km*(1-prog(s));
+const fmt=d=>d.toLocaleString([], {weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+const eta=s=>fmt(new Date(Date.now()+rem(s)/58*36e5+(s.halt||0)*6e4));
+const loc=s=>{if(s.stage<3)return'Lamu Port';if(s.stage==5)return route(s).n;const r=route(s),d=prog(s)*r.km;let b=0;r.cum.forEach((c,i)=>{if(Math.abs(c-d)<Math.abs(r.cum[b]-d))b=i});return'Near '+r.pts[b][0]};
+const match=s=>{const q=$('#q').value.trim().toLowerCase();return!q||[s.id,s.cont,s.cons,s.cargo].join(' ').toLowerCase().includes(q)};
+const fl=s=>flt=='All'||(flt=='At port'&&s.stage<3)||(flt=='In transit'&&(s.stage==3||s.stage==4))||(flt=='Attention'&&(s.halt||s.seal=='tamper'))||(flt=='Delivered'&&s.stage==5);
+function alerts(){const a=[];S.forEach(s=>{if(s.seal=='tamper')a.push(['bad','E-seal tamper on '+s.id,s.cargo+' at '+loc(s)+'. Contact the driver and notify KRA transit control.',s.id]);
+if(s.halt)a.push(['warn',s.id+' stopped for '+s.halt+' min','Queue at weighbridge, '+loc(s).replace('Near ','')+'. ETA moved to '+eta(s)+'.',s.id]);
+if(s.stage<3&&s.ago>48)a.push(['warn','Free time ending for '+s.cont,'Container has been at port for '+s.ago+' hours. Demurrage starts soon.',s.id])});
+a.push(['info','CMA CGM Feeder 02 delayed 14 hours','Berth 1 is occupied. Expect gate-out to start a day later for 3 consignments.',null]);return a}
+function map(){const o=[[33.9,.1],[34.1,-1],[37.6,-3],[39.2,-4.68],[40.2,-3],[41,-2],[41,-.9],[41,3.9],[39.8,3.5],[38.4,3.6],[36,4.45],[34.4,4.6],[34,4.2]].map(p=>px(...p).join(',')).join(' ');
+let h=`<svg class="map" viewBox="0 0 600 690" role="img" aria-label="Schematic map of cargo routes from Lamu Port"><polygon points="${o}" fill="var(--land)" stroke="var(--line)" stroke-width="2"/>`;
+const seen={};for(const r of Object.values(R)){h+=`<polyline fill="none" stroke="var(--mute)" stroke-opacity=".45" stroke-dasharray="4 5" stroke-width="1.6" points="${r.pts.map(p=>px(p[1],p[2]).join(',')).join(' ')}"/>`;r.pts.forEach(p=>seen[p[0]]=p)}
+for(const p of Object.values(seen)){const[x,y]=px(p[1],p[2]),port=p[0]=='Lamu';h+=port?`<circle cx="${x}" cy="${y}" r="9" fill="var(--acc)" stroke="var(--surf)" stroke-width="3"/><text x="${x-14}" y="${y+4}" text-anchor="end" font-size="13" font-weight="600" fill="var(--ink)">Lamu Port</text>`:`<circle cx="${x}" cy="${y}" r="3.5" fill="var(--mute)"/><text x="${x+8}" y="${y+4}" font-size="11" fill="var(--mute)">${p[0]}</text>`}
+const np=S.filter(s=>s.stage<3).length,[lx,ly]=px(40.9,-2.27);h+=`<g transform="translate(${lx-60},${ly+22})"><rect width="110" height="24" rx="12" fill="var(--info-s)"/><text x="55" y="16" text-anchor="middle" font-size="12" font-weight="600" fill="var(--info)">${np} waiting at port</text></g>`;
+S.filter(s=>s.stage==3||s.stage==4).forEach(s=>{const[lo,la]=at(route(s),prog(s)),[x,y]=px(lo,la),c=stat(s)[1],on=s.id==sel;h+=`<g data-id="${s.id}" style="cursor:pointer"><circle cx="${x}" cy="${y}" r="${on?13:0}" fill="var(--acc)" opacity=".22"/><circle cx="${x}" cy="${y}" r="7" fill="var(--${c=='acc'?'acc':c})" stroke="var(--surf)" stroke-width="2.5"><title>${s.id} · ${s.cargo}</title></circle></g>`});
+return h+'</svg>'}
+function rowH(s){const[t,c]=stat(s);return`<button class="row${s.id==sel?' sel':''}" data-id="${s.id}"><div class="m"><b>${s.id} ${chip(t,c)}</b><small>${s.cargo} · ${s.cons}</small><small>${loc(s)} → ${route(s).n}</small><div class="bar"><i style="width:${prog(s)*100}%"></i></div></div></button>`}
+function tower(){const a=S.filter(s=>s.stage==3||s.stage==4).length,p=S.filter(s=>s.stage<3).length,d=S.filter(s=>s.stage==5).length;
+return`<div class="kpis"><div class="kpi"><span>In transit</span><b>${a}</b></div><div class="kpi"><span>At port or clearing</span><b>${p}</b></div><div class="kpi"><span>Open alerts</span><b>${alerts().length}</b></div><div class="kpi"><span>Delivered</span><b>${d}</b></div></div>
+<div class="grid"><div class="card"><h2>Live routes from Lamu<span>Schematic map · updates every 2 s</span></h2>${map()}</div>
+<div class="card"><h2>Active shipments<span>${S.filter(s=>s.stage<5&&match(s)).length} shown</span></h2><div class="list">${S.filter(s=>s.stage<5&&match(s)).map(rowH).join('')||'<p class="note">No shipments match your search.</p>'}</div></div></div>`}
+function ship(){const rows=S.filter(s=>fl(s)&&match(s));
+return`<div class="tools">${['All','At port','In transit','Attention','Delivered'].map(f=>`<button class="f${f==flt?' on':''}" data-f="${f}">${f}</button>`).join('')}<span style="flex:1"></span><button class="btn" id="add">New shipment</button></div>
+<div class="card"><div class="wrap"><table><thead><tr><th>Shipment</th><th>Cargo</th><th>Consignee</th><th>Destination</th><th>Location</th><th>ETA</th><th>Status</th></tr></thead><tbody>${rows.map(s=>{const[t,c]=stat(s);return`<tr data-id="${s.id}"><td><b>${s.id}</b><br><small style="color:var(--mute)">${s.cont}</small></td><td>${s.cargo}</td><td>${s.cons}</td><td>${route(s).n}</td><td>${loc(s)}</td><td>${s.stage==5?'Delivered':s.stage<3?'Awaiting gate-out':eta(s)}</td><td>${chip(t,c)}</td></tr>`}).join('')||'<tr><td colspan="7">No shipments match. Clear the filter or search.</td></tr>'}</tbody></table></div></div>`}
+function vessels(){return`<div class="card"><h2>Vessels at Lamu Port<span>AIS and terminal feed</span></h2><div class="wrap"><table><thead><tr><th>Vessel</th><th>Line</th><th>Containers or units</th><th>Berth</th><th>Discharge</th><th>Status</th></tr></thead><tbody>${V.map(v=>{const c={Discharging:'acc',Berthed:'ok',Arriving:'info',Delayed:'warn',Departed:'ok'}[v[4]];return`<tr style="cursor:default"><td><b>${v[0]}</b></td><td>${v[1]}</td><td>${v[2].toLocaleString()}</td><td>${v[3]}</td><td><div class="bar" style="width:120px"><i style="width:${v[6]*100}%"></i></div></td><td>${chip(v[4]+(v[5]?' · ETA +'+v[5]+' h':''),c)}</td></tr>`}).join('')}</tbody></table></div></div>`}
+function alertsV(){return`<div class="card"><h2>Alerts<span>${alerts().length} open</span></h2>${alerts().map(a=>`<div class="alert"${a[3]?` data-id="${a[3]}" style="cursor:pointer"`:''}>${chip({bad:'Critical',warn:'Warning',info:'Info'}[a[0]],a[0])}<div><b>${a[1]}</b><p>${a[2]}</p></div></div>`).join('')}</div>`}
+function drawer(){const s=S.find(x=>x.id==sel),d=$('#dr');if(!s){d.classList.remove('open');$('#scrim').classList.remove('open');return}
+const[t,c]=stat(s),arr=Date.now()-s.ago*36e5,nx=ST[s.stage+1];
+d.innerHTML=`<div class="dh"><div><h2>${s.id}</h2><small style="color:var(--mute)">${s.cont}</small></div><button class="x" id="cl" aria-label="Close">✕</button></div><p>${chip(t,c)}</p>
+<div class="facts"><div><span>Cargo</span><b>${s.cargo}</b></div><div><span>Consignee</span><b>${s.cons}</b></div><div><span>Shipping line</span><b>${s.line}</b></div><div><span>Destination</span><b>${route(s).n}</b></div><div><span>Current location</span><b>${loc(s)}</b></div><div><span>${s.stage==5?'Delivered':'ETA'}</span><b>${s.stage==5?'Completed':s.stage<3?'After gate-out':eta(s)}</b></div>
+${s.truck?`<div><span>Truck and driver</span><b>${s.truck} · ${s.drv}</b></div><div><span>Speed</span><b>${s.stage==4&&!s.halt?s.spd+' km/h':'0 km/h'}</b></div>`:''}
+<div><span>E-seal</span><b style="color:var(--${s.seal=='ok'?'ok':'bad'})">${s.seal=='ok'?'Intact':'Tamper detected'}</b></div>${s.temp?`<div><span>Cargo temperature</span><b>${s.temp.toFixed(1)} °C</b></div>`:''}</div>
+<h3>Journey</h3><ul class="tl">${ST.map((n,i)=>{const k=i<s.stage?'done':i==s.stage?'now':'todo',tm=i<=s.stage?fmt(new Date(Math.min(Date.now(),arr+OFF[i]*36e5))):'Pending';return`<li class="${k}"><i></i><b>${n}</b><small>${i==s.stage&&i==4?loc(s)+' · '+Math.round(rem(s))+' km to go':tm}</small></li>`}).join('')}</ul>
+<h3>Documents</h3><div class="docs"><span>Bill of lading</span><span>Customs release</span>${s.stage>=3?'<span>Gate pass</span>':''}${s.stage==5?'<span>Proof of delivery</span>':''}</div>
+${s.stage<4?`<button class="btn" id="adv">Mark as: ${nx}</button>`:s.halt?`<button class="btn" id="adv">Clear stop</button>`:''}`}
+function open(id){sel=id;drawer();$('#dr').classList.add('open');$('#scrim').classList.add('open')}
+function render(){$('#view').innerHTML={tower,ship,vessels,alerts:alertsV}[view]();$('#ab').textContent=alerts().length;drawer()}
+function tick(){tk++;S.forEach(s=>{if(s.stage==4&&!s.halt&&s.seal=='ok'||s.stage==4&&s.seal=='tamper'&&false){s.p=Math.min(1,s.p+.004*(.7+Math.random()*.6));s.spd=Math.round(52+Math.random()*16);if(s.p>=1){s.stage=5;s.p=1}}});if(sel&&!$('#dr').matches(':hover')||view!='tower'&&!$('#dr').classList.contains('open')||1)render()}
+document.addEventListener('click',e=>{const n=e.target.closest('.nav');if(n){view=n.dataset.v;document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('on',x==n));$('#title').textContent=n.textContent.replace(/\d+$/,'');render();return}
+if(e.target.closest('#cl')||e.target.id=='scrim'){sel=null;render();return}
+const f=e.target.closest('[data-f]');if(f){flt=f.dataset.f;render();return}
+if(e.target.id=='add'){$('#dlg').showModal();return}
+if(e.target.id=='adv'){const s=S.find(x=>x.id==sel);if(s.halt)s.halt=0;else{s.stage++;if(s.stage==3){s.truck='KDG '+(100+Math.floor(Math.random()*800))+'T';s.drv='Assigned driver'}if(s.stage==4)s.p=.01;s.ago=Math.max(s.ago,OFF[s.stage])}render();return}
+const t=e.target.closest('[data-id]');if(t)open(t.dataset.id)});
+$('#q').addEventListener('input',render);
+$('#nd').innerHTML=Object.entries(R).map(([k,r])=>`<option value="${k}">${r.n}</option>`).join('');
+$('#dc').onclick=()=>$('#dlg').close();
+$('#ds').onclick=()=>{const c=$('#nc').value.trim(),g=$('#ng').value.trim(),n=$('#nn').value.trim();if(!c||!g||!n){alert('Enter a container number, cargo and consignee.');return}
+S.unshift({id:'LT-'+(24081+S.length-10),cont:c,cargo:g,line:'To be confirmed',cons:n,dest:$('#nd').value,stage:0,p:0,ago:0,seal:'ok',spd:0});['#nc','#ng','#nn'].forEach(i=>$(i).value='');$('#dlg').close();view='ship';flt='All';document.querySelector('[data-v=ship]').click()};
+render();setInterval(tick,2000);
+</script>
+</body>
+</html>
