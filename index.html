@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>LamuTrack – Port to destination cargo tracking</title>
+<title>Lamu Port Track – Port operations and cargo tracking</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ops.css">
 <style>
 :root{--bg:#F3F6F7;--surf:#fff;--ink:#10252C;--mute:#5B6F76;--line:#E0E7E9;--acc:#0E8A8A;--acc-s:#DAF0EF;--warn:#B56F08;--warn-s:#FBEFD9;--bad:#C23B4E;--bad-s:#FBE4E7;--ok:#2E8B57;--ok-s:#E0F3E8;--info:#2F66A8;--info-s:#E2ECF8;--land:#EAF0EE;--sea:#DCEBF1;--side:#0E2A33;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
@@ -19,7 +20,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .app{display:grid;grid-template-columns:224px minmax(0,1fr);min-height:100vh}
 .side{background:var(--side);color:#BFD6DA;padding:20px 14px;position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;gap:6px}
 .brand{display:flex;gap:10px;align-items:center;padding:4px 8px 18px;color:#fff}
-.brand b{font-size:19px}.brand svg{flex:none}
+.brand b{font-size:16px}.brand svg{flex:none}
 .nav{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;border-radius:8px;padding:9px 10px;text-align:left;color:inherit}
 .nav:hover{background:rgba(255,255,255,.06)}.nav.on{background:rgba(255,255,255,.12);color:#fff}
 .nav svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -89,12 +90,16 @@ main{padding:16px 14px 96px}.grid{grid-template-columns:1fr}.kpis{grid-template-
 <body>
 <div class="app">
 <nav class="side" aria-label="Main">
-  <div class="brand"><svg width="30" height="30" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#0E8A8A"/><path d="M7 20h18l-3 5H10zM16 7v9M11 12l5-5 5 5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><b>LamuTrack</b></div>
+  <div class="brand"><svg width="30" height="30" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9" fill="#0E8A8A"/><path d="M7 20h18l-3 5H10zM16 7v9M11 12l5-5 5 5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Lamu Port Track</b></div>
   <button class="nav on" data-v="tower"><svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="3"/><path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/></svg>Control tower</button>
   <button class="nav" data-v="ship"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10"/></svg>Shipments</button>
   <button class="nav" data-v="vessels"><svg viewBox="0 0 24 24"><path d="M3 17l2 3h14l2-3zM6 17V9h12v8M12 9V4"/></svg>Vessels</button>
   <button class="nav" data-v="alerts"><svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 1112 0v6l2 2H4zM10 21h4"/></svg>Alerts<span class="badge" id="ab">0</span></button>
-  <small>Sample data. Positions are simulated to show how live tracking behaves.</small>
+  <button class="nav" data-v="ops"><svg viewBox="0 0 24 24"><path d="M4 18a8 8 0 1116 0M12 18l4-6"/></svg>Port operations</button>
+  <button class="nav" data-v="berths"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h12M3 18h8"/></svg>Berth planner</button>
+  <button class="nav" data-v="gate"><svg viewBox="0 0 24 24"><path d="M4 20V8l8-4 8 4v12M9 20v-6h6v6"/></svg>Truck gate</button>
+  <button class="nav" data-v="sim"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 4 8-9"/></svg>Surge simulator</button>
+  <small>Sample data. Positions and port metrics are simulated.</small>
 </nav>
 <main>
   <div class="head"><h1 id="title">Control tower</h1><input class="search" id="q" type="search" placeholder="Search ID, container, consignee" aria-label="Search shipments"><span class="live"><i></i>Live</span></div>
@@ -176,8 +181,9 @@ ${s.truck?`<div><span>Truck and driver</span><b>${s.truck} · ${s.drv}</b></div>
 <h3>Documents</h3><div class="docs"><span>Bill of lading</span><span>Customs release</span>${s.stage>=3?'<span>Gate pass</span>':''}${s.stage==5?'<span>Proof of delivery</span>':''}</div>
 ${s.stage<4?`<button class="btn" id="adv">Mark as: ${nx}</button>`:s.halt?`<button class="btn" id="adv">Clear stop</button>`:''}`}
 function open(id){sel=id;drawer();$('#dr').classList.add('open');$('#scrim').classList.add('open')}
-function render(){$('#view').innerHTML={tower,ship,vessels,alerts:alertsV}[view]();$('#ab').textContent=alerts().length;drawer()}
-function tick(){tk++;S.forEach(s=>{if(s.stage==4&&!s.halt&&s.seal=='ok'||s.stage==4&&s.seal=='tamper'&&false){s.p=Math.min(1,s.p+.004*(.7+Math.random()*.6));s.spd=Math.round(52+Math.random()*16);if(s.p>=1){s.stage=5;s.p=1}}});if(sel&&!$('#dr').matches(':hover')||view!='tower'&&!$('#dr').classList.contains('open')||1)render()}
+function render(){$('#view').innerHTML=({tower,ship,vessels,alerts:alertsV,...(window.OPS||{})})[view]();$('#ab').textContent=alerts().length;drawer()}
+const LIVE=()=>{if(!["berths","gate","sim"].includes(view))render()};
+function tick(){tk++;S.forEach(s=>{if(s.stage==4&&!s.halt&&s.seal=='ok'||s.stage==4&&s.seal=='tamper'&&false){s.p=Math.min(1,s.p+.004*(.7+Math.random()*.6));s.spd=Math.round(52+Math.random()*16);if(s.p>=1){s.stage=5;s.p=1}}});if(sel&&!$('#dr').matches(':hover')||view!='tower'&&!$('#dr').classList.contains('open')||1)LIVE()}
 document.addEventListener('click',e=>{const n=e.target.closest('.nav');if(n){view=n.dataset.v;document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('on',x==n));$('#title').textContent=n.textContent.replace(/\d+$/,'');render();return}
 if(e.target.closest('#cl')||e.target.id=='scrim'){sel=null;render();return}
 const f=e.target.closest('[data-f]');if(f){flt=f.dataset.f;render();return}
@@ -191,5 +197,6 @@ $('#ds').onclick=()=>{const c=$('#nc').value.trim(),g=$('#ng').value.trim(),n=$(
 S.unshift({id:'LT-'+(24081+S.length-10),cont:c,cargo:g,line:'To be confirmed',cons:n,dest:$('#nd').value,stage:0,p:0,ago:0,seal:'ok',spd:0});['#nc','#ng','#nn'].forEach(i=>$(i).value='');$('#dlg').close();view='ship';flt='All';document.querySelector('[data-v=ship]').click()};
 render();setInterval(tick,2000);
 </script>
+<script src="ops.js"></script>
 </body>
 </html>

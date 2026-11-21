@@ -1,0 +1,15 @@
+/* Lamu Port Track: port operations views */
+.gt{padding:12px 16px}.gr{display:flex;align-items:center;gap:10px;margin:6px 0}.gr>span{width:56px;font-size:12px;color:var(--mute);flex:none}
+.gl{position:relative;flex:1;height:34px;background:var(--bg);border-radius:8px;overflow:hidden}
+.gb{position:absolute;top:3px;bottom:3px;border-radius:6px;padding:0 6px;font-size:11px;line-height:28px;white-space:nowrap;overflow:hidden;font-weight:600}
+.gb.occ{background:var(--line);color:var(--mute)}
+.ax{display:flex;justify-content:space-between;margin-left:66px;font-size:11px;color:var(--mute)}
+.cw{position:relative;height:130px;margin:14px 16px 0}.cols{display:flex;gap:3px;height:100%}.cols>div{flex:1;position:relative}
+.cols i{position:absolute;bottom:0;border-radius:3px 3px 0 0}
+.capl{position:absolute;left:0;right:0;border-top:2px dashed var(--bad);z-index:1}
+.lb{display:flex;gap:3px;margin:3px 16px 12px;font-size:11px;color:var(--mute)}.lb span{flex:1;text-align:center}
+.yard{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 16px}.yb{border-radius:10px;padding:10px 12px}
+.yb b{font:700 22px 'Bricolage Grotesque',sans-serif;display:block}.yb span{font-size:12px}
+.ctl{display:flex;gap:20px;flex-wrap:wrap;align-items:center;padding:14px 16px}.ctl label{margin:0;display:flex;gap:8px;align-items:center}
+.ctl input,.ctl select{width:auto}.gap{margin-top:16px}.pad{padding:12px 16px}
+@media (max-width:900px){.yard{grid-template-columns:repeat(2,1fr)}.side{overflow-x:auto}.nav{white-space:nowrap}}
